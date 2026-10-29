@@ -27,65 +27,128 @@
 <body>
   <div id="overlay">
     <h2>🥽 Nexus Spatial OS</h2>
-    <p>Modo Holográfico 3D (VisionOS Launcher)</p>
+    <p>Modo Holográfico 3D (VisionOS Nativo)</p>
   </div>
 
   <script>
-    // 1. Crear Canvas 2D para renderizar la UI dentro del panel 3D
+    // 1. Estado del Sistema VR
+    let currentApp = 'launcher';
+    let terminalHistory = ['NexusOS Spatial v1.0', 'Kernel VR Activo.'];
+    let fileSystem = [
+      { name: 'documento.txt', size: '2 KB', content: 'Archivo cifrado espacial.' },
+      { name: 'sistema.sys', size: '12 KB', content: 'Núcleo WebXR online.' }
+    ];
+    let selectedFile = null;
+
+    // 2. Canvas 2D para renderizar la UI en el panel 3D
     const uiCanvas = document.createElement('canvas');
     uiCanvas.width = 1024;
     uiCanvas.height = 640;
     const ctx = uiCanvas.getContext('2d');
 
-    function drawUI(activeApp = '') {
+    function drawUI() {
       ctx.clearRect(0, 0, uiCanvas.width, uiCanvas.height);
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      
+      // Panel Base
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
       ctx.roundRect(0, 0, uiCanvas.width, uiCanvas.height, 32);
       ctx.fill();
       ctx.lineWidth = 4;
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.3)';
       ctx.stroke();
 
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 36px system-ui';
-      ctx.fillText('Nexus WebOS Apps', 60, 80);
+      ctx.font = 'bold 30px system-ui';
+      ctx.fillText('Nexus Spatial OS (VR Mode)', 50, 65);
 
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-      ctx.font = '22px system-ui';
-      ctx.fillText(activeApp ? `App Activa: ${activeApp}` : 'Selecciona una aplicación espacial', 60, 120);
-
-      const apps = [
-        { name: 'Navegador', icon: '🌐', color: '#3b82f6', x: 80, y: 180 },
-        { name: 'Archivos', icon: '📁', color: '#10b981', x: 260, y: 180 },
-        { name: 'Terminal', icon: '💻', color: '#8b5cf6', x: 440, y: 180 },
-        { name: 'Juegos', icon: '🎮', color: '#ec4899', x: 620, y: 180 },
-        { name: 'Ajustes', icon: '⚙️', color: '#f59e0b', x: 800, y: 180 }
-      ];
-
-      apps.forEach(app => {
-        ctx.fillStyle = app.color;
+      if (currentApp !== 'launcher') {
+        ctx.fillStyle = '#38bdf8';
         ctx.beginPath();
-        ctx.roundRect(app.x, app.y, 140, 140, 28);
+        ctx.roundRect(860, 30, 110, 48, 14);
         ctx.fill();
-
-        ctx.font = '64px system-ui';
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 18px system-ui';
         ctx.textAlign = 'center';
-        ctx.fillText(app.icon, app.x + 70, app.y + 92);
+        ctx.fillText('🏠 Home', 915, 60);
+        ctx.textAlign = 'left';
+      }
 
-        ctx.fillStyle = '#ffffff';
+      if (currentApp === 'launcher') {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
         ctx.font = '20px system-ui';
-        ctx.fillText(app.name, app.x + 70, app.y + 180);
-      });
+        ctx.fillText('Selecciona una aplicación espacial:', 50, 110);
 
-      ctx.textAlign = 'left';
+        const apps = [
+          { name: 'Navegador', icon: '🌐', color: '#3b82f6', x: 70, y: 170 },
+          { name: 'Archivos', icon: '📁', color: '#10b981', x: 250, y: 170 },
+          { name: 'Terminal', icon: '💻', color: '#8b5cf6', x: 430, y: 170 },
+          { name: 'Juegos', icon: '🎮', color: '#ec4899', x: 610, y: 170 },
+          { name: 'Ajustes', icon: '⚙️', color: '#f59e0b', x: 790, y: 170 }
+        ];
+
+        apps.forEach(app => {
+          ctx.fillStyle = app.color;
+          ctx.beginPath();
+          ctx.roundRect(app.x, app.y, 140, 140, 28);
+          ctx.fill();
+
+          ctx.font = '60px system-ui';
+          ctx.textAlign = 'center';
+          ctx.fillText(app.icon, app.x + 70, app.y + 90);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '20px system-ui';
+          ctx.fillText(app.name, app.x + 70, app.y + 180);
+        });
+        ctx.textAlign = 'left';
+      } else if (currentApp === 'Navegador') {
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = 'bold 22px system-ui';
+        ctx.fillText('🌐 Navegador Web Espacial', 50, 110);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.fillRect(50, 130, 924, 50);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '18px monospace';
+        ctx.fillText('URL: https://nexus-webos.local/vr', 70, 162);
+      } else if (currentApp === 'Archivos') {
+        ctx.fillStyle = '#10b981';
+        ctx.font = 'bold 22px system-ui';
+        ctx.fillText('📁 Gestor de Archivos VR', 50, 110);
+        fileSystem.forEach((file, index) => {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+          ctx.fillRect(50, 150 + (index * 60), 400, 50);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '18px system-ui';
+          ctx.fillText(`📄 ${file.name}`, 70, 182 + (index * 60));
+        });
+      } else if (currentApp === 'Terminal') {
+        ctx.fillStyle = '#8b5cf6';
+        ctx.font = 'bold 22px system-ui';
+        ctx.fillText('💻 Terminal VR', 50, 110);
+        ctx.fillStyle = '#10b981';
+        ctx.font = '16px monospace';
+        ctx.fillText('> Entorno WebXR sincronizado y listo.', 70, 160);
+      } else if (currentApp === 'Juegos') {
+        ctx.fillStyle = '#ec4899';
+        ctx.font = 'bold 22px system-ui';
+        ctx.fillText('🎮 Centro de Juegos VR', 50, 110);
+      } else if (currentApp === 'Ajustes') {
+        ctx.fillStyle = '#f59e0b';
+        ctx.font = 'bold 22px system-ui';
+        ctx.fillText('⚙️ Ajustes VR', 50, 110);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '18px system-ui';
+        ctx.fillText('Modo estereoscópico WebXR: Compatible', 70, 160);
+      }
+
       ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-      ctx.font = '18px system-ui';
-      ctx.fillText('Servidor activo en local: 0.0.0.0:8080', 60, 580);
+      ctx.font = '16px system-ui';
+      ctx.fillText('Servidor local activo: 0.0.0.0:8080', 50, 600);
     }
 
     drawUI();
 
-    // 2. Escena Three.js
+    // 3. Escena Three.js
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x030712);
     scene.fog = new THREE.FogExp2(0x030712, 0.05);
@@ -93,7 +156,7 @@
     const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.xr.enabled = true;
+    renderer.xr.enabled = true; // Soporte WebXR nativo para visores
     document.body.appendChild(renderer.domElement);
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
@@ -103,7 +166,6 @@
     pointLight.position.set(0, 5, 2);
     scene.add(pointLight);
 
-    // 3. Crear Textura basada en el Canvas de la UI
     const texture = new THREE.CanvasTexture(uiCanvas);
     const windowGeometry = new THREE.PlaneGeometry(4, 2.5);
     const windowMaterial = new THREE.MeshBasicMaterial({
@@ -130,7 +192,7 @@
     const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
     scene.add(particlesMesh);
 
-    // 4. Raycaster para detectar clics
+    // 4. Raycaster para clics en VR
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
@@ -143,23 +205,33 @@
 
       if (intersects.length > 0) {
         const uv = intersects[0].uv;
-        const canvasX = uv.x * uiCanvas.width;
-        const canvasY = (1 - uv.y) * uiCanvas.height;
+        const cx = uv.x * uiCanvas.width;
+        const cy = (1 - uv.y) * uiCanvas.height;
 
-        const apps = [
-          { name: 'Navegador Web', x: 80 },
-          { name: 'Gestor de Archivos', x: 260 },
-          { name: 'Terminal de Comando', x: 440 },
-          { name: 'Centro de Juegos', x: 620 },
-          { name: 'Configuración', x: 800 }
-        ];
+        if (currentApp !== 'launcher' && cx >= 860 && cx <= 970 && cy >= 30 && cy <= 78) {
+          currentApp = 'launcher';
+          drawUI();
+          texture.needsUpdate = true;
+          return;
+        }
 
-        apps.forEach(app => {
-          if (canvasX >= app.x && canvasX <= app.x + 140 && canvasY >= 180 && canvasY <= 320) {
-            drawUI(app.name);
-            texture.needsUpdate = true;
-          }
-        });
+        if (currentApp === 'launcher') {
+          const apps = [
+            { name: 'Navegador', x: 70 },
+            { name: 'Archivos', x: 250 },
+            { name: 'Terminal', x: 430 },
+            { name: 'Juegos', x: 610 },
+            { name: 'Ajustes', x: 790 }
+          ];
+
+          apps.forEach(app => {
+            if (cx >= app.x && cx <= app.x + 140 && cy >= 170 && cy <= 310) {
+              currentApp = app.name;
+              drawUI();
+              texture.needsUpdate = true;
+            }
+          });
+        }
       }
     });
 
