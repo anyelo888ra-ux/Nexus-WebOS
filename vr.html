@@ -5,65 +5,129 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nexus WebOS - Spatial Vision Mode</title>
   <style>
-    body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
+    body { margin: 0; overflow: hidden; background-color: #030712; font-family: system-ui, sans-serif; }
     #overlay {
       position: absolute;
-      top: 20px;
-      left: 20px;
+      top: 24px;
+      left: 24px;
       color: #fff;
       z-index: 10;
-      background: rgba(0, 0, 0, 0.6);
-      padding: 12px 20px;
-      border-radius: 12px;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(15, 23, 42, 0.75);
+      padding: 16px 24px;
+      border-radius: 16px;
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
     }
+    #overlay h2 { margin: 0 0 6px 0; font-size: 18px; color: #38bdf8; }
+    #overlay p { margin: 0; font-size: 13px; opacity: 0.8; }
+    .back-btn {
+      position: absolute;
+      bottom: 24px;
+      left: 24px;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 10px 20px;
+      border-radius: 12px;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .back-btn:hover { background: rgba(255, 255, 255, 0.2); }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
   <div id="overlay">
     <h2>🥽 Nexus Spatial OS</h2>
-    <p>Modo inmersivo activado (VisionOS Style)</p>
+    <p>Modo Holográfico 3D (Simulación WebXR)</p>
   </div>
 
+  <button class="back-btn" onclick="window.location.href='pc.html'">← Volver a PC Mode</button>
+
   <script>
-    // Configuración básica del escenario 3D
+    // 1. Escena, Cámara y Renderizador
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    scene.background = new THREE.Color(0x030712);
+    scene.fog = new THREE.FogExp2(0x030712, 0.05);
+
+    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.xr.enabled = true; // Habilitar soporte WebXR
+    renderer.xr.enabled = true;
     document.body.appendChild(renderer.domElement);
 
-    // Crear un panel translúcido estilo Glassmorphism flotante
-    const geometry = new THREE.PlaneGeometry(3, 2);
-    const material = new THREE.MeshBasicMaterial({
+    // 2. Iluminación
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+    scene.add(ambientLight);
+
+    const pointLight = new THREE.PointLight(0x38bdf8, 2, 50);
+    pointLight.position.set(0, 5, 2);
+    scene.add(pointLight);
+
+    // 3. Ventana Holográfica Principal (Glassmorphism 3D)
+    const windowGeometry = new THREE.BoxGeometry(3.5, 2.2, 0.05);
+    const windowMaterial = new THREE.MeshPhysicalMaterial({
       color: 0x1e293b,
+      metalness: 0.1,
+      roughness: 0.1,
+      transmission: 0.6, // Efecto cristal transparente
+      thickness: 0.5,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.9,
       side: THREE.DoubleSide
     });
-    const spatialWindow = new THREE.Mesh(geometry, material);
-    spatialWindow.position.set(0, 0, -3);
+    const spatialWindow = new THREE.Mesh(windowGeometry, windowMaterial);
+    spatialWindow.position.set(0, 0, -4);
     scene.add(spatialWindow);
 
-    // Iluminación suave
-    const light = new THREE.AmbientLight(0xffffff, 1);
-    scene.add(light);
+    // 4. Grid de suelo futurista
+    const gridHelper = new THREE.GridHelper(30, 30, 0x38bdf8, 0x1e293b);
+    gridHelper.position.set(0, -2, -4);
+    scene.add(gridHelper);
 
-    camera.position.z = 1;
+    // 5. Partículas de estrellas flotantes en el espacio virtual
+    const particlesGeometry = new THREE.BufferGeometry();
+    const particlesCount = 300;
+    const posArray = new Float32Array(particlesCount * 3);
 
-    // Animación de flotación suave de la ventana
+    for(let i = 0; i < particlesCount * 3; i++) {
+      posArray[i] = (Math.random() - 0.5) * 30;
+    }
+
+    particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+    const particlesMaterial = new THREE.PointsMaterial({
+      size: 0.05,
+      color: 0x38bdf8
+    });
+    const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+    scene.add(particlesMesh);
+
+    // Posición inicial de la cámara
+    camera.position.z = 0;
+
+    // Animación fluida de flotación
+    let clock = new THREE.Clock();
     function animate() {
       renderer.setAnimationLoop(() => {
-        spatialWindow.position.y = Math.sin(Date.now() * 0.0015) * 0.1;
+        const elapsedTime = clock.getElapsedTime();
+        
+        // Flotar la ventana suavemente
+        spatialWindow.position.y = Math.sin(elapsedTime * 1.5) * 0.1;
+        spatialWindow.rotation.y = Math.sin(elapsedTime * 0.8) * 0.05;
+
+        // Girar lentamente las partículas
+        particlesMesh.rotation.y = elapsedTime * 0.05;
+
         renderer.render(scene, camera);
       });
     }
     animate();
 
+    // Ajuste de pantalla al redimensionar
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
