@@ -21,22 +21,6 @@
     }
     #overlay h2 { margin: 0 0 6px 0; font-size: 18px; color: #38bdf8; }
     #overlay p { margin: 0; font-size: 13px; opacity: 0.8; }
-    .back-btn {
-      position: absolute;
-      bottom: 24px;
-      left: 24px;
-      z-index: 10;
-      background: rgba(255, 255, 255, 0.1);
-      color: #fff;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      padding: 10px 20px;
-      border-radius: 12px;
-      cursor: pointer;
-      backdrop-filter: blur(10px);
-      font-weight: 600;
-      transition: background 0.2s;
-    }
-    .back-btn:hover { background: rgba(255, 255, 255, 0.2); }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -46,8 +30,6 @@
     <p>Modo Holográfico 3D (VisionOS Launcher)</p>
   </div>
 
-  <button class="back-btn" onclick="window.location.href='pc.html'">← Volver a PC Mode</button>
-
   <script>
     // 1. Crear Canvas 2D para renderizar la UI dentro del panel 3D
     const uiCanvas = document.createElement('canvas');
@@ -56,7 +38,6 @@
     const ctx = uiCanvas.getContext('2d');
 
     function drawUI(activeApp = '') {
-      // Fondo translúcido del panel
       ctx.clearRect(0, 0, uiCanvas.width, uiCanvas.height);
       ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
       ctx.roundRect(0, 0, uiCanvas.width, uiCanvas.height, 32);
@@ -65,7 +46,6 @@
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
       ctx.stroke();
 
-      // Encabezado
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 36px system-ui';
       ctx.fillText('Nexus WebOS Apps', 60, 80);
@@ -74,7 +54,6 @@
       ctx.font = '22px system-ui';
       ctx.fillText(activeApp ? `App Activa: ${activeApp}` : 'Selecciona una aplicación espacial', 60, 120);
 
-      // Íconos de Aplicaciones
       const apps = [
         { name: 'Navegador', icon: '🌐', color: '#3b82f6', x: 80, y: 180 },
         { name: 'Archivos', icon: '📁', color: '#10b981', x: 260, y: 180 },
@@ -84,24 +63,20 @@
       ];
 
       apps.forEach(app => {
-        // Caja de App
         ctx.fillStyle = app.color;
         ctx.beginPath();
         ctx.roundRect(app.x, app.y, 140, 140, 28);
         ctx.fill();
 
-        // Emoji / Icono
         ctx.font = '64px system-ui';
         ctx.textAlign = 'center';
         ctx.fillText(app.icon, app.x + 70, app.y + 92);
 
-        // Nombre de App
         ctx.fillStyle = '#ffffff';
         ctx.font = '20px system-ui';
         ctx.fillText(app.name, app.x + 70, app.y + 180);
       });
 
-      // Pie del panel
       ctx.textAlign = 'left';
       ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
       ctx.font = '18px system-ui';
@@ -121,7 +96,6 @@
     renderer.xr.enabled = true;
     document.body.appendChild(renderer.domElement);
 
-    // Luces
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
     scene.add(ambientLight);
 
@@ -141,12 +115,10 @@
     spatialWindow.position.set(0, 0, -3.8);
     scene.add(spatialWindow);
 
-    // Grid del suelo
     const gridHelper = new THREE.GridHelper(30, 30, 0x38bdf8, 0x1e293b);
     gridHelper.position.set(0, -2, -4);
     scene.add(gridHelper);
 
-    // Estrellas en el espacio
     const particlesGeometry = new THREE.BufferGeometry();
     const particlesCount = 300;
     const posArray = new Float32Array(particlesCount * 3);
@@ -158,7 +130,7 @@
     const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
     scene.add(particlesMesh);
 
-    // 4. Raycaster para detectar clics en el panel 3D
+    // 4. Raycaster para detectar clics
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
@@ -174,7 +146,6 @@
         const canvasX = uv.x * uiCanvas.width;
         const canvasY = (1 - uv.y) * uiCanvas.height;
 
-        // Detectar app pulsada según coordenadas X/Y
         const apps = [
           { name: 'Navegador Web', x: 80 },
           { name: 'Gestor de Archivos', x: 260 },
@@ -192,7 +163,6 @@
       }
     });
 
-    // Animación
     const clock = new THREE.Clock();
     function animate() {
       renderer.setAnimationLoop(() => {
