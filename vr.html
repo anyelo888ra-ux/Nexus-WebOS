@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nexus WebOS - Spatial Vision Mode</title>
+  <style>
+    body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
+    #overlay {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: #fff;
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 12px 20px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+  <div id="overlay">
+    <h2>🥽 Nexus Spatial OS</h2>
+    <p>Modo inmersivo activado (VisionOS Style)</p>
+  </div>
+
+  <script>
+    // Configuración básica del escenario 3D
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true; // Habilitar soporte WebXR
+    document.body.appendChild(renderer.domElement);
+
+    // Crear un panel translúcido estilo Glassmorphism flotante
+    const geometry = new THREE.PlaneGeometry(3, 2);
+    const material = new THREE.MeshBasicMaterial({
+      color: 0x1e293b,
+      transparent: true,
+      opacity: 0.85,
+      side: THREE.DoubleSide
+    });
+    const spatialWindow = new THREE.Mesh(geometry, material);
+    spatialWindow.position.set(0, 0, -3);
+    scene.add(spatialWindow);
+
+    // Iluminación suave
+    const light = new THREE.AmbientLight(0xffffff, 1);
+    scene.add(light);
+
+    camera.position.z = 1;
+
+    // Animación de flotación suave de la ventana
+    function animate() {
+      renderer.setAnimationLoop(() => {
+        spatialWindow.position.y = Math.sin(Date.now() * 0.0015) * 0.1;
+        renderer.render(scene, camera);
+      });
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
