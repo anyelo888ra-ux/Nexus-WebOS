@@ -57,7 +57,7 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transform: scaleX(-1); /* Espejo horizontal */
+      transform: scaleX(-1);
     }
     .cam-status {
       position: absolute;
@@ -71,7 +71,7 @@
     }
   </style>
 
-  <!-- Bibliotecas externas (Three.js + MediaPipe Hands) -->
+  <!-- Bibliotecas externas -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
@@ -90,35 +90,98 @@
   </div>
 
   <script>
-    // 1. Canvas 2D para renderizar la interfaz de usuario de las apps
+    // 1. Estado del Sistema WebOS
+    let currentApp = 'launcher'; 
+    let terminalHistory = [
+      'NexusOS v1.0 Kernel (Spatial Edition)',
+      'Escribe "help" para ver los comandos disponibles.'
+    ];
+    let fileSystem = [
+      { name: 'documento.txt', size: '2 KB', content: '¡Bienvenido a Nexus WebOS Spatial!' },
+      { name: 'sistema.sys', size: '12 KB', content: 'Configuración del núcleo de NexusOS' },
+      { name: 'notas.txt', size: '1 KB', content: 'Recuerda probar los gestos con la mano.' }
+    ];
+    let selectedFile = null;
+    let gameState = { score: 0, targetX: 300, targetY: 250 };
+    let browserUrl = 'https://bing.com';
+
+    // 2. Canvas 2D para renderizar la UI de las aplicaciones en 3D
     const uiCanvas = document.createElement('canvas');
     uiCanvas.width = 1024;
     uiCanvas.height = 640;
     const ctx = uiCanvas.getContext('2d');
 
-    function drawUI(activeApp = '') {
+    function drawUI() {
       ctx.clearRect(0, 0, uiCanvas.width, uiCanvas.height);
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      
+      // Panel Base
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
       ctx.roundRect(0, 0, uiCanvas.width, uiCanvas.height, 32);
       ctx.fill();
       ctx.lineWidth = 4;
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.3)';
       ctx.stroke();
 
+      // Header Global
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 36px system-ui';
-      ctx.fillText('Nexus WebOS Apps', 60, 80);
+      ctx.font = 'bold 30px system-ui';
+      ctx.fillText('Nexus Spatial OS', 50, 65);
 
+      // Botón Home si no estamos en el Launcher
+      if (currentApp !== 'launcher') {
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.roundRect(860, 30, 110, 48, 14);
+        ctx.fill();
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 18px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillText('🏠 Home', 915, 60);
+        ctx.textAlign = 'left';
+      }
+
+      // Render de la app correspondiente
+      switch(currentApp) {
+        case 'launcher':
+          renderLauncher();
+          break;
+        case 'Navegador':
+          renderBrowser();
+          break;
+        case 'Archivos':
+          renderFiles();
+          break;
+        case 'Terminal':
+          renderTerminal();
+          break;
+        case 'Juegos':
+          renderGame();
+          break;
+        case 'Ajustes':
+          renderSettings();
+          break;
+      }
+
+      // Footer
+      ctx.textAlign = 'left';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.font = '16px system-ui';
+      ctx.fillText('Servidor local activo: 0.0.0.0:8080 | Estado: En Ejecución', 50, 600);
+    }
+
+    // --- RENDERS DE APLICACIONES ---
+
+    function renderLauncher() {
       ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-      ctx.font = '22px system-ui';
-      ctx.fillText(activeApp ? `App Activa: ${activeApp}` : 'Selecciona una aplicación espacial', 60, 120);
+      ctx.font = '20px system-ui';
+      ctx.fillText('Selecciona una aplicación para iniciar:', 50, 110);
 
       const apps = [
-        { name: 'Navegador', icon: '🌐', color: '#3b82f6', x: 80, y: 180 },
-        { name: 'Archivos', icon: '📁', color: '#10b981', x: 260, y: 180 },
-        { name: 'Terminal', icon: '💻', color: '#8b5cf6', x: 440, y: 180 },
-        { name: 'Juegos', icon: '🎮', color: '#ec4899', x: 620, y: 180 },
-        { name: 'Ajustes', icon: '⚙️', color: '#f59e0b', x: 800, y: 180 }
+        { name: 'Navegador', icon: '🌐', color: '#3b82f6', x: 70, y: 170 },
+        { name: 'Archivos', icon: '📁', color: '#10b981', x: 250, y: 170 },
+        { name: 'Terminal', icon: '💻', color: '#8b5cf6', x: 430, y: 170 },
+        { name: 'Juegos', icon: '🎮', color: '#ec4899', x: 610, y: 170 },
+        { name: 'Ajustes', icon: '⚙️', color: '#f59e0b', x: 790, y: 170 }
       ];
 
       apps.forEach(app => {
@@ -127,24 +190,175 @@
         ctx.roundRect(app.x, app.y, 140, 140, 28);
         ctx.fill();
 
-        ctx.font = '64px system-ui';
+        ctx.font = '60px system-ui';
         ctx.textAlign = 'center';
-        ctx.fillText(app.icon, app.x + 70, app.y + 92);
+        ctx.fillText(app.icon, app.x + 70, app.y + 90);
 
         ctx.fillStyle = '#ffffff';
         ctx.font = '20px system-ui';
         ctx.fillText(app.name, app.x + 70, app.y + 180);
       });
-
       ctx.textAlign = 'left';
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    }
+
+    function renderBrowser() {
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 22px system-ui';
+      ctx.fillText('🌐 Navegador Espacial', 50, 110);
+
+      // Barra de Navegación
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.beginPath();
+      ctx.roundRect(50, 130, 924, 50, 12);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '18px monospace';
+      ctx.fillText(`URL: ${browserUrl}`, 70, 162);
+
+      // Ventana de Contenido
+      ctx.fillStyle = 'rgba(30, 41, 59, 0.8)';
+      ctx.beginPath();
+      ctx.roundRect(50, 200, 924, 360, 16);
+      ctx.fill();
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '20px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('Vista previa simulada de la web', 512, 350);
+      ctx.font = '16px system-ui';
+      ctx.fillText('Toca la barra de búsqueda para cambiar de página', 512, 390);
+      ctx.textAlign = 'left';
+    }
+
+    function renderFiles() {
+      ctx.fillStyle = '#10b981';
+      ctx.font = 'bold 22px system-ui';
+      ctx.fillText('📁 Gestor de Archivos - /root/home', 50, 110);
+
+      // Lista de archivos
+      fileSystem.forEach((file, index) => {
+        const y = 150 + (index * 60);
+        ctx.fillStyle = selectedFile === file ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255, 255, 255, 0.08)';
+        ctx.beginPath();
+        ctx.roundRect(50, y, 400, 50, 10);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '18px system-ui';
+        ctx.fillText(`📄 ${file.name}`, 70, y + 32);
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText(file.size, 380, y + 32);
+      });
+
+      // Panel de lectura
+      ctx.fillStyle = 'rgba(30, 41, 59, 0.8)';
+      ctx.beginPath();
+      ctx.roundRect(480, 150, 494, 400, 16);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 18px system-ui';
+      ctx.fillText(selectedFile ? `Detalles: ${selectedFile.name}` : 'Selecciona un archivo', 510, 190);
+
+      if (selectedFile) {
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = '16px monospace';
+        ctx.fillText(selectedFile.content, 510, 240);
+      }
+    }
+
+    function renderTerminal() {
+      ctx.fillStyle = '#8b5cf6';
+      ctx.font = 'bold 22px system-ui';
+      ctx.fillText('💻 Consola de Comandos (Nexus CLI)', 50, 110);
+
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+      ctx.beginPath();
+      ctx.roundRect(50, 130, 924, 430, 16);
+      ctx.fill();
+      ctx.strokeStyle = '#8b5cf6';
+      ctx.stroke();
+
+      ctx.fillStyle = '#10b981';
+      ctx.font = '16px monospace';
+      
+      let startY = 165;
+      terminalHistory.slice(-14).forEach(line => {
+        ctx.fillText(`> ${line}`, 70, startY);
+        startY += 26;
+      });
+
+      // Botones de Comando Rápido
+      const cmdBtns = ['help', 'ls', 'ping', 'clear', 'matrix'];
+      cmdBtns.forEach((cmd, i) => {
+        ctx.fillStyle = 'rgba(139, 92, 246, 0.3)';
+        ctx.beginPath();
+        ctx.roundRect(70 + (i * 110), 510, 95, 36, 8);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 14px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(cmd, 70 + (i * 110) + 47, 533);
+      });
+      ctx.textAlign = 'left';
+    }
+
+    function renderGame() {
+      ctx.fillStyle = '#ec4899';
+      ctx.font = 'bold 22px system-ui';
+      ctx.fillText(`🎮 Mini Juego Arcade - Puntuación: ${gameState.score}`, 50, 110);
+
+      ctx.fillStyle = 'rgba(30, 41, 59, 0.8)';
+      ctx.beginPath();
+      ctx.roundRect(50, 130, 924, 430, 16);
+      ctx.fill();
+
+      // Diana flotante
+      ctx.fillStyle = '#ec4899';
+      ctx.beginPath();
+      ctx.arc(gameState.targetX, gameState.targetY, 35, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(gameState.targetX, gameState.targetY, 18, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#cbd5e1';
       ctx.font = '18px system-ui';
-      ctx.fillText('Servidor activo en local: 0.0.0.0:8080', 60, 580);
+      ctx.fillText('¡Toca la diana con el dedo o el ratón para ganar puntos!', 70, 530);
+    }
+
+    function renderSettings() {
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = 'bold 22px system-ui';
+      ctx.fillText('⚙️ Ajustes del Sistema Operativo', 50, 110);
+
+      const options = [
+        'Renderizado: 60 FPS (Optimizado)',
+        'Efectos Espaciales 3D: Activados',
+        'Hand Tracking (Cámara Web): Sensibilidad Alta',
+        'Sincronización Server (Node.js): Activa (0.0.0.0:8080)'
+      ];
+
+      options.forEach((opt, index) => {
+        const y = 160 + (index * 70);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.beginPath();
+        ctx.roundRect(50, y, 924, 55, 12);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '18px system-ui';
+        ctx.fillText(opt, 80, y + 34);
+      });
     }
 
     drawUI();
 
-    // 2. Escena 3D
+    // 3. Escena 3D Three.js
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x030712);
     scene.fog = new THREE.FogExp2(0x030712, 0.05);
@@ -161,7 +375,7 @@
     pointLight.position.set(0, 5, 2);
     scene.add(pointLight);
 
-    // Ventana holográfica principal
+    // Ventana holográfica 3D
     const texture = new THREE.CanvasTexture(uiCanvas);
     const windowGeometry = new THREE.PlaneGeometry(4, 2.5);
     const windowMaterial = new THREE.MeshBasicMaterial({
@@ -173,14 +387,14 @@
     spatialWindow.position.set(0, 0, -3.8);
     scene.add(spatialWindow);
 
-    // Cursor Holográfico 3D para seguimiento de dedos
+    // Cursor 3D
     const cursorGeometry = new THREE.SphereGeometry(0.06, 16, 16);
     const cursorMaterial = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.8 });
     const handCursor = new THREE.Mesh(cursorGeometry, cursorMaterial);
     handCursor.position.set(0, 0, -3.7);
     scene.add(handCursor);
 
-    // Entorno (Grid y Partículas)
+    // Grid y Estrellas
     const gridHelper = new THREE.GridHelper(30, 30, 0x38bdf8, 0x1e293b);
     gridHelper.position.set(0, -2, -4);
     scene.add(gridHelper);
@@ -196,7 +410,7 @@
     const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
     scene.add(particlesMesh);
 
-    // 3. Sistema de Interacción (Mouse + Raycaster)
+    // 4. Lógica de Interacción Espacial
     const raycaster = new THREE.Raycaster();
     const pointerVector = new THREE.Vector2();
 
@@ -209,34 +423,88 @@
 
       if (intersects.length > 0) {
         const uv = intersects[0].uv;
-        const canvasX = uv.x * uiCanvas.width;
-        const canvasY = (1 - uv.y) * uiCanvas.height;
+        const cx = uv.x * uiCanvas.width;
+        const cy = (1 - uv.y) * uiCanvas.height;
 
-        const apps = [
-          { name: 'Navegador Web', x: 80 },
-          { name: 'Gestor de Archivos', x: 260 },
-          { name: 'Terminal de Comando', x: 440 },
-          { name: 'Centro de Juegos', x: 620 },
-          { name: 'Configuración', x: 800 }
-        ];
+        // Clic en Botón Home
+        if (currentApp !== 'launcher' && cx >= 860 && cx <= 970 && cy >= 30 && cy <= 78) {
+          currentApp = 'launcher';
+          drawUI();
+          texture.needsUpdate = true;
+          return;
+        }
 
-        apps.forEach(app => {
-          if (canvasX >= app.x && canvasX <= app.x + 140 && canvasY >= 180 && canvasY <= 320) {
-            drawUI(app.name);
+        // Interacciones según App
+        if (currentApp === 'launcher') {
+          const apps = [
+            { name: 'Navegador', x: 70 },
+            { name: 'Archivos', x: 250 },
+            { name: 'Terminal', x: 430 },
+            { name: 'Juegos', x: 610 },
+            { name: 'Ajustes', x: 790 }
+          ];
+
+          apps.forEach(app => {
+            if (cx >= app.x && cx <= app.x + 140 && cy >= 170 && cy <= 310) {
+              currentApp = app.name;
+              drawUI();
+              texture.needsUpdate = true;
+            }
+          });
+        } else if (currentApp === 'Archivos') {
+          fileSystem.forEach((file, i) => {
+            const y = 150 + (i * 60);
+            if (cx >= 50 && cx <= 450 && cy >= y && cy <= y + 50) {
+              selectedFile = file;
+              drawUI();
+              texture.needsUpdate = true;
+            }
+          });
+        } else if (currentApp === 'Terminal') {
+          const cmdBtns = [
+            { name: 'help', action: () => terminalHistory.push('Comandos: help, ls, ping, clear, matrix') },
+            { name: 'ls', action: () => terminalHistory.push('documento.txt  sistema.sys  notas.txt') },
+            { name: 'ping', action: () => terminalHistory.push('PING 0.0.0.0:8080 - 0.2ms latency [OK]') },
+            { name: 'clear', action: () => terminalHistory = ['Consola limpia.'] },
+            { name: 'matrix', action: () => terminalHistory.push('01001110 01100101 01111000 01110101 01110011') }
+          ];
+
+          cmdBtns.forEach((cmd, i) => {
+            const bx = 70 + (i * 110);
+            if (cx >= bx && cx <= bx + 95 && cy >= 510 && cy <= 546) {
+              cmd.action();
+              drawUI();
+              texture.needsUpdate = true;
+            }
+          });
+        } else if (currentApp === 'Juegos') {
+          const dist = Math.hypot(cx - gameState.targetX, cy - gameState.targetY);
+          if (dist <= 40) {
+            gameState.score += 10;
+            gameState.targetX = 150 + Math.random() * 700;
+            gameState.targetY = 200 + Math.random() * 280;
+            drawUI();
             texture.needsUpdate = true;
           }
-        });
+        } else if (currentApp === 'Navegador') {
+          if (cx >= 50 && cx <= 974 && cy >= 130 && cy <= 180) {
+            const urls = ['https://bing.com', 'https://github.com', 'https://wikipedia.org', 'https://vercel.com'];
+            browserUrl = urls[Math.floor(Math.random() * urls.length)];
+            drawUI();
+            texture.needsUpdate = true;
+          }
+        }
       }
     }
 
-    // Interacción por Ratón
+    // Interacción Mouse
     window.addEventListener('click', (event) => {
       const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
       const mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
       triggerClickAt(mouseX, mouseY);
     });
 
-    // 4. Integración de MediaPipe Hands (Detección de Cámara)
+    // 5. MediaPipe Hands
     const videoElement = document.getElementById('webcam');
     const statusElement = document.getElementById('cam-status');
     let isPinching = false;
@@ -247,29 +515,26 @@
         statusElement.style.color = "#10b981";
 
         const landmarks = results.multiHandLandmarks[0];
-        const indexFinger = landmarks[8]; // Punta del dedo índice
-        const thumb = landmarks[4];       // Punta del dedo pulgar
+        const indexFinger = landmarks[8];
+        const thumb = landmarks[4];
 
-        // Invertir X para efecto espejo
         const handX = -(indexFinger.x * 2 - 1);
         const handY = -(indexFinger.y * 2 - 1);
 
-        // Mover el puntero 3D según el dedo índice
         handCursor.position.x = handX * 2.5;
         handCursor.position.y = handY * 1.5;
 
-        // Medir distancia entre índice y pulgar para detectar pinch (clic)
         const distance = Math.hypot(indexFinger.x - thumb.x, indexFinger.y - thumb.y);
 
         if (distance < 0.08) {
           if (!isPinching) {
             isPinching = true;
-            handCursor.material.color.setHex(0x10b981); // Cambio a verde en clic
+            handCursor.material.color.setHex(0x10b981);
             triggerClickAt(handX, handY);
           }
         } else {
           isPinching = false;
-          handCursor.material.color.setHex(0x38bdf8); // Restaurar azul
+          handCursor.material.color.setHex(0x38bdf8);
         }
       } else {
         statusElement.innerText = "Buscando mano...";
@@ -303,7 +568,7 @@
       statusElement.style.color = "#ef4444";
     });
 
-    // 5. Bucle de Animación
+    // Bucle de Animación
     const clock = new THREE.Clock();
     function animate() {
       requestAnimationFrame(animate);
