@@ -1,0 +1,12 @@
+{
+  "name": "nexus-webos",
+  "version": "1.0.0",
+  "description": "Next-generation WebOS built for Desktop, Mobile & WebXR",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
