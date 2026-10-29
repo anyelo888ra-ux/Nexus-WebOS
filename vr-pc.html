@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nexus WebOS - Spatial PC Simulator</title>
+  <style>
+    body { margin: 0; overflow: hidden; background-color: #030712; font-family: system-ui, sans-serif; }
+    #overlay {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      color: #fff;
+      z-index: 10;
+      background: rgba(15, 23, 42, 0.75);
+      padding: 16px 24px;
+      border-radius: 16px;
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+    #overlay h2 { margin: 0 0 6px 0; font-size: 18px; color: #38bdf8; }
+    #overlay p { margin: 0; font-size: 13px; opacity: 0.8; }
+    .back-btn {
+      position: absolute;
+      bottom: 24px;
+      left: 24px;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 10px 20px;
+      border-radius: 12px;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .back-btn:hover { background: rgba(255, 255, 255, 0.2); }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+  <div id="overlay">
+    <h2>🥽 Nexus Spatial OS</h2>
+    <p>Simulador 3D para Escritorio</p>
+  </div>
+
+  <button class="back-btn" onclick="window.location.href='pc.html'">← Volver a PC Mode</button>
+
+  <script>
+    const uiCanvas = document.createElement('canvas');
+    uiCanvas.width = 1024;
+    uiCanvas.height = 640;
+    const ctx = uiCanvas.getContext('2d');
+
+    function drawUI(activeApp = '') {
+      ctx.clearRect(0, 0, uiCanvas.width, uiCanvas.height);
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.roundRect(0, 0, uiCanvas.width, uiCanvas.height, 32);
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 36px system-ui';
+      ctx.fillText('Nexus WebOS Apps', 60, 80);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.font = '22px system-ui';
+      ctx.fillText(activeApp ? `App Activa: ${activeApp}` : 'Selecciona una aplicación espacial', 60, 120);
+
+      const apps = [
+        { name: 'Navegador', icon: '🌐', color: '#3b82f6', x: 80, y: 180 },
+        { name: 'Archivos', icon: '📁', color: '#10b981', x: 260, y: 180 },
+        { name: 'Terminal', icon: '💻', color: '#8b5cf6', x: 440, y: 180 },
+        { name: 'Juegos', icon: '🎮', color: '#ec4899', x: 620, y: 180 },
+        { name: 'Ajustes', icon: '⚙️', color: '#f59e0b', x: 800, y: 180 }
+      ];
+
+      apps.forEach(app => {
+        ctx.fillStyle = app.color;
+        ctx.beginPath();
+        ctx.roundRect(app.x, app.y, 140, 140, 28);
+        ctx.fill();
+
+        ctx.font = '64px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillText(app.icon, app.x + 70, app.y + 92);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '20px system-ui';
+        ctx.fillText(app.name, app.x + 70, app.y + 180);
+      });
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.font = '18px system-ui';
+      ctx.fillText('Servidor activo en local: 0.0.0.0:8080', 60, 580);
+    }
+
+    drawUI();
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x030712);
+    scene.fog = new THREE.FogExp2(0x030712, 0.05);
+
+    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    document.body.appendChild(renderer.domElement);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+    scene.add(ambientLight);
+
+    const pointLight = new THREE.PointLight(0x38bdf8, 2, 50);
+    pointLight.position.set(0, 5, 2);
+    scene.add(pointLight);
+
+    const texture = new THREE.CanvasTexture(uiCanvas);
+    const windowGeometry = new THREE.PlaneGeometry(4, 2.5);
+    const windowMaterial = new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      side: THREE.DoubleSide
+    });
+    const spatialWindow = new THREE.Mesh(windowGeometry, windowMaterial);
+    spatialWindow.position.set(0, 0, -3.8);
+    scene.add(spatialWindow);
+
+    const gridHelper = new THREE.GridHelper(30, 30, 0x38bdf8, 0x1e293b);
+    gridHelper.position.set(0, -2, -4);
+    scene.add(gridHelper);
+
+    const particlesGeometry = new THREE.BufferGeometry();
+    const particlesCount = 300;
+    const posArray = new Float32Array(particlesCount * 3);
+    for(let i = 0; i < particlesCount * 3; i++) {
+      posArray[i] = (Math.random() - 0.5) * 30;
+    }
+    particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+    const particlesMaterial = new THREE.PointsMaterial({ size: 0.05, color: 0x38bdf8 });
+    const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+    scene.add(particlesMesh);
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    window.addEventListener('click', (event) => {
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObject(spatialWindow);
+
+      if (intersects.length > 0) {
+        const uv = intersects[0].uv;
+        const canvasX = uv.x * uiCanvas.width;
+        const canvasY = (1 - uv.y) * uiCanvas.height;
+
+        const apps = [
+          { name: 'Navegador Web', x: 80 },
+          { name: 'Gestor de Archivos', x: 260 },
+          { name: 'Terminal de Comando', x: 440 },
+          { name: 'Centro de Juegos', x: 620 },
+          { name: 'Configuración', x: 800 }
+        ];
+
+        apps.forEach(app => {
+          if (canvasX >= app.x && canvasX <= app.x + 140 && canvasY >= 180 && canvasY <= 320) {
+            drawUI(app.name);
+            texture.needsUpdate = true;
+          }
+        });
+      }
+    });
+
+    const clock = new THREE.Clock();
+    function animate() {
+      renderer.setAnimationLoop(() => {
+        const elapsedTime = clock.getElapsedTime();
+        spatialWindow.position.y = Math.sin(elapsedTime * 1.5) * 0.08;
+        particlesMesh.rotation.y = elapsedTime * 0.03;
+        renderer.render(scene, camera);
+      });
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
