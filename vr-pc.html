@@ -21,6 +21,7 @@
     }
     #overlay h2 { margin: 0 0 6px 0; font-size: 18px; color: #38bdf8; }
     #overlay p { margin: 0; font-size: 13px; opacity: 0.8; }
+    
     .back-btn {
       position: absolute;
       bottom: 24px;
@@ -37,18 +38,59 @@
       transition: background 0.2s;
     }
     .back-btn:hover { background: rgba(255, 255, 255, 0.2); }
+
+    /* Stream de Cámara para Hand Tracking */
+    #webcam-container {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      z-index: 10;
+      width: 180px;
+      height: 120px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(10px);
+    }
+    #webcam {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1); /* Espejo horizontal */
+    }
+    .cam-status {
+      position: absolute;
+      bottom: 6px;
+      left: 8px;
+      font-size: 10px;
+      color: #38bdf8;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
   </style>
+
+  <!-- Bibliotecas externas (Three.js + MediaPipe Hands) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 </head>
 <body>
   <div id="overlay">
     <h2>🥽 Nexus Spatial OS</h2>
-    <p>Simulador 3D para Escritorio</p>
+    <p>Control: Mouse o Gestos de Mano (Cámara Web)</p>
   </div>
 
   <button class="back-btn" onclick="window.location.href='pc.html'">← Volver a PC Mode</button>
 
+  <div id="webcam-container">
+    <video id="webcam" autoplay playsinline muted></video>
+    <div class="cam-status" id="cam-status">Iniciando cámara...</div>
+  </div>
+
   <script>
+    // 1. Canvas 2D para renderizar la interfaz de usuario de las apps
     const uiCanvas = document.createElement('canvas');
     uiCanvas.width = 1024;
     uiCanvas.height = 640;
@@ -102,6 +144,7 @@
 
     drawUI();
 
+    // 2. Escena 3D
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x030712);
     scene.fog = new THREE.FogExp2(0x030712, 0.05);
@@ -109,7 +152,6 @@
     const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.xr.enabled = true;
     document.body.appendChild(renderer.domElement);
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
@@ -119,6 +161,7 @@
     pointLight.position.set(0, 5, 2);
     scene.add(pointLight);
 
+    // Ventana holográfica principal
     const texture = new THREE.CanvasTexture(uiCanvas);
     const windowGeometry = new THREE.PlaneGeometry(4, 2.5);
     const windowMaterial = new THREE.MeshBasicMaterial({
@@ -130,6 +173,14 @@
     spatialWindow.position.set(0, 0, -3.8);
     scene.add(spatialWindow);
 
+    // Cursor Holográfico 3D para seguimiento de dedos
+    const cursorGeometry = new THREE.SphereGeometry(0.06, 16, 16);
+    const cursorMaterial = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.8 });
+    const handCursor = new THREE.Mesh(cursorGeometry, cursorMaterial);
+    handCursor.position.set(0, 0, -3.7);
+    scene.add(handCursor);
+
+    // Entorno (Grid y Partículas)
     const gridHelper = new THREE.GridHelper(30, 30, 0x38bdf8, 0x1e293b);
     gridHelper.position.set(0, -2, -4);
     scene.add(gridHelper);
@@ -145,14 +196,15 @@
     const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
     scene.add(particlesMesh);
 
+    // 3. Sistema de Interacción (Mouse + Raycaster)
     const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
+    const pointerVector = new THREE.Vector2();
 
-    window.addEventListener('click', (event) => {
-      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    function triggerClickAt(normalizedX, normalizedY) {
+      pointerVector.x = normalizedX;
+      pointerVector.y = normalizedY;
 
-      raycaster.setFromCamera(mouse, camera);
+      raycaster.setFromCamera(pointerVector, camera);
       const intersects = raycaster.intersectObject(spatialWindow);
 
       if (intersects.length > 0) {
@@ -175,16 +227,90 @@
           }
         });
       }
+    }
+
+    // Interacción por Ratón
+    window.addEventListener('click', (event) => {
+      const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+      const mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+      triggerClickAt(mouseX, mouseY);
     });
 
+    // 4. Integración de MediaPipe Hands (Detección de Cámara)
+    const videoElement = document.getElementById('webcam');
+    const statusElement = document.getElementById('cam-status');
+    let isPinching = false;
+
+    function onHandResults(results) {
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        statusElement.innerText = "Mano detectada";
+        statusElement.style.color = "#10b981";
+
+        const landmarks = results.multiHandLandmarks[0];
+        const indexFinger = landmarks[8]; // Punta del dedo índice
+        const thumb = landmarks[4];       // Punta del dedo pulgar
+
+        // Invertir X para efecto espejo
+        const handX = -(indexFinger.x * 2 - 1);
+        const handY = -(indexFinger.y * 2 - 1);
+
+        // Mover el puntero 3D según el dedo índice
+        handCursor.position.x = handX * 2.5;
+        handCursor.position.y = handY * 1.5;
+
+        // Medir distancia entre índice y pulgar para detectar pinch (clic)
+        const distance = Math.hypot(indexFinger.x - thumb.x, indexFinger.y - thumb.y);
+
+        if (distance < 0.08) {
+          if (!isPinching) {
+            isPinching = true;
+            handCursor.material.color.setHex(0x10b981); // Cambio a verde en clic
+            triggerClickAt(handX, handY);
+          }
+        } else {
+          isPinching = false;
+          handCursor.material.color.setHex(0x38bdf8); // Restaurar azul
+        }
+      } else {
+        statusElement.innerText = "Buscando mano...";
+        statusElement.style.color = "#38bdf8";
+      }
+    }
+
+    const hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+
+    hands.setOptions({
+      maxNumHands: 1,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.6,
+      minTrackingConfidence: 0.6
+    });
+
+    hands.onResults(onHandResults);
+
+    const cameraUtils = new Camera(videoElement, {
+      onFrame: async () => {
+        await hands.send({ image: videoElement });
+      },
+      width: 320,
+      height: 240
+    });
+
+    cameraUtils.start().catch(() => {
+      statusElement.innerText = "Cam no disponible (Usa mouse)";
+      statusElement.style.color = "#ef4444";
+    });
+
+    // 5. Bucle de Animación
     const clock = new THREE.Clock();
     function animate() {
-      renderer.setAnimationLoop(() => {
-        const elapsedTime = clock.getElapsedTime();
-        spatialWindow.position.y = Math.sin(elapsedTime * 1.5) * 0.08;
-        particlesMesh.rotation.y = elapsedTime * 0.03;
-        renderer.render(scene, camera);
-      });
+      requestAnimationFrame(animate);
+      const elapsedTime = clock.getElapsedTime();
+      spatialWindow.position.y = Math.sin(elapsedTime * 1.5) * 0.08;
+      particlesMesh.rotation.y = elapsedTime * 0.03;
+      renderer.render(scene, camera);
     }
     animate();
 
